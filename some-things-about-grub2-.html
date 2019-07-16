@@ -1236,14 +1236,136 @@ h6:hover .anchor-link {
 =&gt; grub_parser_execute                          
 =&gt; grub_load_normal_mode =&gt; grub_dl_load ("normal")   
                          =&gt; grub_command_execute ("normal", 0, 0)</code></pre>
+<p>normal command execute</p>
+
+<pre><code>normal command execute
+    parse grub.cfg
+    {user operate}
+    reload menu entry script.
+    linux command
+    initrd command
+    boot command</code></pre>
+<p>printf函数的跟踪</p>
+
+<pre><code>printf 
+=&gt; grub_xputs (both UserSpace &amp; Grub2)
+   =&gt; grub_xputs = grub_xputs_dumb;
+      =&gt; grub_putcode_dumb(code,term);
+        |
+        |glyph
+        |
+        |=&gt; grub_console_putchar(...)
+            =&gt; grub_console_putchar_real(...)
+               =&gt; grub_bios_interrput(...)</code></pre>
 <p>So, some questions rised:
     Which function call grub_main?<br>
     ...<br>
     How those command line organized?</p>
-<h3 id="Flowchart-of-Grub2-running">Flowchart of Grub2 running<a class="anchor-link" href="#Flowchart-of-Grub2-running">&#182;</a></h3><h3 id="The-way-ordered-the-Gru2-doing-such-things.---&gt;-Grub2-utils'-flowchart.">The way ordered the Gru2 doing such things. --&gt; Grub2 utils' flowchart.<a class="anchor-link" href="#The-way-ordered-the-Gru2-doing-such-things.---&gt;-Grub2-utils'-flowchart.">&#182;</a></h3><p><img src="images/grub2-utils_flowchart.png" alt="grub2-utils_flowchart.png">
-    For Generally, It's a question about Where things that installed to Disk  from? and Where it go? In computer world,it's a regular world, At almost any time (I think) the logical is defined. When I want to know it more details fastly, I using debug tools, When I want How it designed, read its source code.
+<h3 id="Flowchart-of-Grub2-running">Flowchart of Grub2 running<a class="anchor-link" href="#Flowchart-of-Grub2-running">&#182;</a></h3><h4 id="Reference">Reference<a class="anchor-link" href="#Reference">&#182;</a></h4>
+<pre><code>https://www.kernel.org/doc/Documentation/x86/boot.txt
+
+</code></pre>
+<h3 id="The-way-ordered-the-Gru2-doing-such-things.---&gt;-Grub2-utils'-flowchart.">The way ordered the Gru2 doing such things. --&gt; Grub2 utils' flowchart.<a class="anchor-link" href="#The-way-ordered-the-Gru2-doing-such-things.---&gt;-Grub2-utils'-flowchart.">&#182;</a></h3><p><img src="images/grub2-utils_flowchart.png" alt="grub2-utils_flowchart.png">
+    For Generally, It's a question about Where things that installed to Disk  from? and Where it go? In computer world,it's a regular world, At almost any time (I think) the logical is defined. When I want to know it more details fastly, I using debug tools, When I want How it designed, read its source code.<br>
     bootloader承上启下，上乘BIOS/UEFI接口，并受到硬件架构限制，下启OS，</p>
-<h2 id="Something-about-ELF">Something about ELF<a class="anchor-link" href="#Something-about-ELF">&#182;</a></h2><h2 id="Some-Reference">Some Reference<a class="anchor-link" href="#Some-Reference">&#182;</a></h2><h2 id="Something-about-Debugging-grub2-with-qemu">Something about Debugging grub2 with qemu<a class="anchor-link" href="#Something-about-Debugging-grub2-with-qemu">&#182;</a></h2>
+<h2 id="Something-about-ELF">Something about ELF<a class="anchor-link" href="#Something-about-ELF">&#182;</a></h2><h3 id="summary">summary<a class="anchor-link" href="#summary">&#182;</a></h3>
+<pre><code>    Executable and Linkable Format.
+    defines the structure for binaries, libaries, and core files.(core dump).
+    The ELF's specification of OS allows the operating to interpreter its underlying machine instructions correctly.
+    are typically the out put of a compiler or linker and are a binary format.
+    It can be analyzed by binutils.
+</code></pre>
+<h3 id="-"> <a class="anchor-link" href="#-">&#182;</a></h3>
+<pre><code>benefit
+learning anything would be benifit....
+</code></pre>
+<h3 id="-"> <a class="anchor-link" href="#-">&#182;</a></h3>
+<pre><code>information:
+    `readefl -h a.out` or `hexdump -C -n 64 a.out` for binary detail.
+    1.Magic Number + class
+    2. Data + Version
+    3. OS/ABI + Version
+    4. Type:[CORE/DYN/EXEC/REL/]
+       CORE (value 4)
+       DYN (Shared object file), for libraries (value 3)
+       EXEC (Executable file), for binaries (value 2)
+       REL (Relocatable file), before linked into an executable file (value 1)
+    5. Machine + Version
+    6. Entry point address.
+    7. Strat of / Size of / Number of program headers
+    8. start of / Size of / Number of section headers
+    9. Flags
+    10. Size of this headers.
+</code></pre>
+<h3 id="Besides-the-ELF-header">Besides the ELF header<a class="anchor-link" href="#Besides-the-ELF-header">&#182;</a></h3><h4 id="Part1.-Program-Heasers-/-Segments">Part1. Program Heasers / Segments<a class="anchor-link" href="#Part1.-Program-Heasers-/-Segments">&#182;</a></h4>
+<pre><code>    `readelf -l a.out`
+      zero or more segments conclued.
+      desrcibe how to create a process/memory image for runtime execution.
+      When kernel sees these segments, it uses them to map them into memory, using the mmap(2) system call. It's means it coverts predefined instructions into a memory image. If your ELF file is normal binary, it requires these program header, Otherwise, it simply won't run. It uses these headers, with the underlying data structure, to form a process. This process is similar for shared libraries. for operation: using `strace ./a.out`
+</code></pre>
+<h4 id="Part2.-Section-Heasers-/-Sections">Part2. Section Heasers / Sections<a class="anchor-link" href="#Part2.-Section-Heasers-/-Sections">&#182;</a></h4>
+<pre><code>an overview for linking and relocation
+      `readelf -S a.out`
+      0 or more sections. Four main sections(`objdump -h a.out`):
+                .text  -&gt; excutable code
+                .data  -&gt; Initialized data with read/write access rights.
+                .rodata -&gt; Initialized data, read only. (A)
+                .bss    -&gt; Uniitialized data, able to read/write. (WA)
+</code></pre>
+<p>Section Group
+   <code>readelf -g a.out</code>
+    some sections can be grouped.</p>
+<h4 id="Part3.-Data">Part3. Data<a class="anchor-link" href="#Part3.-Data">&#182;</a></h4>
+<pre><code>Two complementary 'views'
+   ㈠ Used for the linker to allow excution(segments).
+   ㈡ Used for categorizing instructions and data (sections)
+</code></pre>
+<hr>
+<p>It can be find by <code>readelf -a |grep GNU</code><br>
+   GNU_EH_FRAME<br>
+        a sorted queue used by gcc. It stores exception handlers. So when something goes wrong, it can use this area to deal correctly with it.<br>
+    GNU_STACK<br>
+        used to store stack information. It's a buffer, or scratch place, where items are stored, like local variables. This will occur with LIFO(Last In, First Out), similar to putting boxes on to of each other. When a process function is started a block is reserved. When the function is finished, it will be marked as free again.</p>
+<h3 id="tools">tools<a class="anchor-link" href="#tools">&#182;</a></h3>
+<pre><code>pacman -S pax-utils elfutils
+Ref: https://www.mankier.com/package/pax-utils
+sudo pacman -S paxtest
+AUR packages: execstack
+https://linux.die.net/man/8/execstack
+elfkickers
+radare2
+</code></pre>
+<h3 id="Reference">Reference<a class="anchor-link" href="#Reference">&#182;</a></h3>
+<pre><code>http://www.skyfree.org/linux/references/ELF_Format.pdf
+http://www.skyfree.org/linux/references/references.html
+</code></pre>
+<h2 id="Debug-Grub2-using-qemu">Debug Grub2 using qemu<a class="anchor-link" href="#Debug-Grub2-using-qemu">&#182;</a></h2><h3 id="Prepare">Prepare<a class="anchor-link" href="#Prepare">&#182;</a></h3><h4 id="compile">compile<a class="anchor-link" href="#compile">&#182;</a></h4>
+<pre><code>./configure --perfix=`pwd`/out --disable-device-mapper 
+grub-install --target=i386-pc   
+ make -j $(nproc)</code></pre>
+<h4 id="make-a-test-disk-file">make a test disk file<a class="anchor-link" href="#make-a-test-disk-file">&#182;</a></h4>
+<pre><code> dd if=/dev/zero of=debug_grub2_bios.disk bs=1M count=50
+ df -h debug_grub2_bios.disk</code></pre>
+<h4 id="install-grub2-in-test-disk-file">install grub2 in test disk file<a class="anchor-link" href="#install-grub2-in-test-disk-file">&#182;</a></h4>
+<pre><code>sudo losetup --partscan --find debug_grub2_bios.disk
+sudo mkfs.ext2 /dev/mapper/loop0p1 
+sudo losetup -d /dev/loop0
+
+grub-install --target=i386-pc debug_grub2_bios.disk</code></pre>
+<p>如果只需要调试主逻辑或者ISO，制作ISO文件,
+<a href="https://www.gnu.org/software/grub/manual/grub/grub.html#Making-a-GRUB-bootable-CD_002dROM">https://www.gnu.org/software/grub/manual/grub/grub.html#Making-a-GRUB-bootable-CD_002dROM</a></p>
+<h4 id="DEBUG-FILE-USED-FOR-GDB">DEBUG FILE USED FOR GDB<a class="anchor-link" href="#DEBUG-FILE-USED-FOR-GDB">&#182;</a></h4><p><code>make -d boot.image</code> showing the process of compile and link needed file .</p>
+<h3 id="terminal-one">terminal one<a class="anchor-link" href="#terminal-one">&#182;</a></h3><p>handisk file test:<br>
+<code>qemu-system-x86_64 -m 64 -hda debug_grub2_bios.disk -gdb tcp::6633 -nographic -serial mon:stdio  -S</code></p>
+<p>iso test:<br>
+<code>qemu-system-x86_64 -m 64m -cdrom grub.iso -gdb tcp::6633 -nographic -serial mon:stdio  -S</code></p>
+<hr>
+<p>help info:<br>
+-serial mon:stdio redirect the serial port to char deice 'mon:stdio'<br>
+-S freeze CPU at startup ( use 'c' to start execution ).</p>
+<h3 id="terminal-two">terminal two<a class="anchor-link" href="#terminal-two">&#182;</a></h3><p>$ gdb
+(gdb) target remote:6633</p>
+<h2 id="Something-about-Debugging-grub2-with-qemu">Something about Debugging grub2 with qemu<a class="anchor-link" href="#Something-about-Debugging-grub2-with-qemu">&#182;</a></h2>
 </div>
 </div>
 </div>
